@@ -16,7 +16,6 @@ El módulo ofrece dos métodos de carga:
 """
 
 import csv
-import os
 import random
 from collections import Counter
 from pathlib import Path
@@ -27,6 +26,9 @@ DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 # Nombre del archivo CSV esperado si se usa la carga local
 LOCAL_CSV_FILENAME = "bitext_customer_support.csv"
+
+# Nombre real del archivo CSV en el repositorio de Hugging Face
+REMOTE_CSV_FILENAME = "Bitext_Sample_Customer_Support_Training_Dataset_27K_responses-v11.csv"
 
 
 class DataLoader:
@@ -56,11 +58,9 @@ class DataLoader:
         """
         Descarga el dataset desde HuggingFace Hub.
 
-        Requiere la biblioteca `datasets`:
-            pip install datasets
-
-        Nota: La biblioteca `datasets` se usa únicamente para DESCARGAR
-              los datos; NO se utiliza para clasificación ni ML.
+        Descarga el CSV directamente desde el repositorio de Hugging Face
+        usando `huggingface_hub` para evitar dependencias incompatibles con
+        el entorno de ejecución.
 
         Parámetros
         ----------
@@ -73,20 +73,33 @@ class DataLoader:
         tuple[list[str], list[str]]
             (textos, etiquetas)
         """
-        try:
-            from datasets import load_dataset
-        except ImportError:
-            raise ImportError(
-                "La biblioteca 'datasets' no está instalada.\n"
-                "Instálala con: pip install datasets\n"
-                "O descarga el CSV manualmente desde HuggingFace y usa load_from_csv()."
-            )
-
         print(f"[DataLoader] Descargando dataset desde HuggingFace: {dataset_name}...")
-        dataset = load_dataset(dataset_name, split=split)
+        try:
+            from huggingface_hub import hf_hub_download
+        except ImportError as exc:
+            raise ImportError(
+                "La biblioteca 'huggingface-hub' no está instalada.\n"
+                "Instálala con: pip install huggingface-hub"
+            ) from exc
 
-        texts  = [row["instruction"] for row in dataset]
-        labels = [row["category"]    for row in dataset]
+        try:
+            csv_source_path = hf_hub_download(
+                repo_id=dataset_name,
+                repo_type="dataset",
+                filename=REMOTE_CSV_FILENAME,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"No fue posible descargar el dataset desde HuggingFace: {dataset_name}\n"
+                f"Verifica la conexión a internet o descarga manualmente el archivo CSV."
+            ) from exc
+
+        texts, labels = self._load_csv_file(
+            Path(csv_source_path),
+            text_col="instruction",
+            label_col="category",
+            encoding="utf-8",
+        )
 
         print(f"[DataLoader] Dataset cargado: {len(texts)} instancias.")
         self._print_class_distribution(labels)
@@ -127,30 +140,12 @@ class DataLoader:
                 f"  2. Usa load_from_huggingface() para descarga automática."
             )
 
-        texts, labels = [], []
-
-        with open(file_path, "r", encoding=encoding, newline="") as f:
-            reader = csv.DictReader(f)
-
-            # Verificar columnas requeridas
-            if text_col not in reader.fieldnames:
-                raise ValueError(
-                    f"Columna '{text_col}' no encontrada. "
-                    f"Columnas disponibles: {reader.fieldnames}"
-                )
-            if label_col not in reader.fieldnames:
-                raise ValueError(
-                    f"Columna '{label_col}' no encontrada. "
-                    f"Columnas disponibles: {reader.fieldnames}"
-                )
-
-            for row in reader:
-                text  = row[text_col].strip()
-                label = row[label_col].strip().upper()
-
-                if text and label:   # Omitir filas vacías
-                    texts.append(text)
-                    labels.append(label)
+        texts, labels = self._load_csv_file(
+            file_path,
+            text_col=text_col,
+            label_col=label_col,
+            encoding=encoding,
+        )
 
         print(f"[DataLoader] Dataset cargado desde CSV: {len(texts)} instancias.")
         self._print_class_distribution(labels)
@@ -259,6 +254,40 @@ class DataLoader:
             for text, label in zip(texts, labels):
                 writer.writerow({"instruction": text, "category": label})
         print(f"[DataLoader] Dataset guardado localmente en: {save_path}")
+
+    @staticmethod
+    def _load_csv_file(
+        file_path: Path,
+        text_col: str,
+        label_col: str,
+        encoding: str,
+    ) -> tuple[list[str], list[str]]:
+        """Carga textos y etiquetas desde un CSV arbitrario."""
+        texts, labels = [], []
+
+        with open(file_path, "r", encoding=encoding, newline="") as f:
+            reader = csv.DictReader(f)
+
+            if text_col not in reader.fieldnames:
+                raise ValueError(
+                    f"Columna '{text_col}' no encontrada. "
+                    f"Columnas disponibles: {reader.fieldnames}"
+                )
+            if label_col not in reader.fieldnames:
+                raise ValueError(
+                    f"Columna '{label_col}' no encontrada. "
+                    f"Columnas disponibles: {reader.fieldnames}"
+                )
+
+            for row in reader:
+                text = row[text_col].strip()
+                label = row[label_col].strip().upper()
+
+                if text and label:
+                    texts.append(text)
+                    labels.append(label)
+
+        return texts, labels
 
     @staticmethod
     def _print_class_distribution(labels: list[str]) -> None:

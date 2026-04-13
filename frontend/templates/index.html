@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HelpDesk AI — Clasificador de Tickets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- ── HEADER ─────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <div class="logo-text">
+          <span class="logo-name">HelpDesk<strong>AI</strong></span>
+          <span class="logo-sub">Motor de Clasificación · Naïve Bayes</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label" id="statusLabel">Conectando...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── HERO ──────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Sistema de Enrutamiento Inteligente</p>
+      <h1 class="hero-title">Clasifica tu solicitud<br/><em>al instante</em></h1>
+      <p class="hero-desc">
+        Ingresa tu consulta y nuestro motor de IA detectará automáticamente la categoría
+        correcta para redirigirla al equipo adecuado.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────────────── -->
+  <main class="main">
+    <div class="workspace">
+
+      <!-- ── FORM PANEL ──────────────────────────────────────────── -->
+      <section class="panel panel--form">
+        <div class="panel-header">
+          <span class="panel-tag">01</span>
+          <h2 class="panel-title">Nuevo Ticket</h2>
+        </div>
+
+        <div class="ticket-meta-row">
+          <div class="field">
+            <label class="field-label" for="ticketId">ID de Ticket</label>
+            <div class="ticket-id-wrapper">
+              <input
+                class="field-input field-input--mono"
+                type="text"
+                id="ticketId"
+                readonly
+                placeholder="Generando..."
+              />
+              <button class="btn-regenerate" id="btnRegenerate" title="Generar nuevo ID">
+                ↻
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="subject">Asunto <span class="field-optional">(opcional)</span></label>
+          <input
+            class="field-input"
+            type="text"
+            id="subject"
+            placeholder="Ej: No puedo acceder a mi cuenta..."
+            maxlength="150"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="description">
+            Descripción <span class="field-required">*</span>
+          </label>
+          <textarea
+            class="field-textarea"
+            id="description"
+            placeholder="Describe tu problema con el mayor detalle posible. Por ejemplo: 'Realicé un pedido hace 5 días y aún no he recibido confirmación de envío. Mi número de orden es...'"
+            rows="6"
+            maxlength="1000"
+          ></textarea>
+          <div class="char-counter">
+            <span id="charCount">0</span> / 1000
+          </div>
+        </div>
+
+        <div class="quick-examples">
+          <p class="examples-label">Ejemplos rápidos:</p>
+          <div class="examples-chips">
+            <button class="chip" data-example="I want to cancel my order, it hasn't been shipped yet.">Cancelar orden</button>
+            <button class="chip" data-example="I was charged twice for my last purchase, please refund one payment.">Reembolso</button>
+            <button class="chip" data-example="My package has been stuck in transit for 2 weeks with no updates.">Envío atascado</button>
+            <button class="chip" data-example="I cannot log in to my account, I forgot my password.">Acceso a cuenta</button>
+            <button class="chip" data-example="I need an invoice for my recent purchase for accounting purposes.">Factura</button>
+          </div>
+        </div>
+
+        <button class="btn-classify" id="btnClassify">
+          <span class="btn-classify__icon">⚡</span>
+          <span class="btn-classify__text">Clasificar Ticket</span>
+          <span class="btn-classify__loader" id="btnLoader"></span>
+        </button>
+      </section>
+
+      <!-- ── RESULT PANEL ──────────────────────────────────────────── -->
+      <section class="panel panel--result" id="resultPanel">
+
+        <!-- Estado vacío -->
+        <div class="result-empty" id="resultEmpty">
+          <div class="empty-icon">🎯</div>
+          <p class="empty-title">Esperando clasificación</p>
+          <p class="empty-desc">Completa el formulario y presiona<br/><strong>Clasificar Ticket</strong> para ver el análisis.</p>
+        </div>
+
+        <!-- Estado de carga -->
+        <div class="result-loading hidden" id="resultLoading">
+          <div class="loading-ring">
+            <div class="loading-ring__inner"></div>
+          </div>
+          <p class="loading-text">Analizando solicitud...</p>
+        </div>
+
+        <!-- Estado de error -->
+        <div class="result-error hidden" id="resultError">
+          <div class="error-icon">⚠️</div>
+          <p class="error-title">Error al clasificar</p>
+          <p class="error-msg" id="errorMsg">—</p>
+          <button class="btn-retry" id="btnRetry">Intentar de nuevo</button>
+        </div>
+
+        <!-- Resultado -->
+        <div class="result-content hidden" id="resultContent">
+          <div class="panel-header">
+            <span class="panel-tag">02</span>
+            <h2 class="panel-title">Resultado</h2>
+            <span class="result-ticket-id" id="resultTicketId"></span>
+          </div>
+
+          <!-- Categoría principal -->
+          <div class="category-card" id="categoryCard">
+            <div class="category-card__icon" id="categoryIcon"></div>
+            <div class="category-card__info">
+              <p class="category-card__name" id="categoryName"></p>
+              <p class="category-card__label" id="categoryLabel"></p>
+            </div>
+            <div class="category-card__confidence">
+              <span class="confidence-value" id="confidenceValue"></span>
+              <span class="confidence-label">confianza</span>
+            </div>
+          </div>
+
+          <!-- Barra de confianza principal -->
+          <div class="confidence-bar-wrapper">
+            <div class="confidence-bar-track">
+              <div class="confidence-bar-fill" id="mainConfidenceBar"></div>
+            </div>
+          </div>
+
+          <!-- Distribución de probabilidades -->
+          <div class="prob-section">
+            <p class="prob-section-title">Distribución de probabilidades</p>
+            <div class="prob-list" id="probList"></div>
+          </div>
+
+          <!-- Detalles del análisis -->
+          <div class="analysis-row">
+            <div class="analysis-chip">
+              <span class="analysis-chip__label">Tokens analizados</span>
+              <span class="analysis-chip__value" id="tokensUsed">—</span>
+            </div>
+            <div class="analysis-chip">
+              <span class="analysis-chip__label">Procesado</span>
+              <span class="analysis-chip__value" id="processedAt">—</span>
+            </div>
+          </div>
+
+          <button class="btn-new-ticket" id="btnNewTicket">
+            + Clasificar otro ticket
+          </button>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- ── FOOTER ─────────────────────────────────────────────────────── -->
+  <footer class="footer">
+    <p>
+      Proyecto No.1 — IA 2026 · Universidad Rafael Landívar ·
+      Implementación manual de <strong>Naïve Bayes Multinomial</strong>
+    </p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
