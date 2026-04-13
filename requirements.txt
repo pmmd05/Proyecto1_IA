@@ -1,0 +1,24 @@
+# ============================================================
+# Dependencias del Proyecto: Clasificación de Tickets (Naïve Bayes)
+# Universidad Rafael Landívar — Inteligencia Artificial 2026
+# ============================================================
+
+# --- Procesamiento de texto (NLTK: solo tokenización y stopwords) ---
+nltk==3.9.1
+
+# --- Carga del dataset desde HuggingFace (solo para descarga de datos) ---
+datasets==3.5.0
+huggingface-hub==0.29.0
+
+# --- Servidor web (Flask para el backend de la interfaz web) ---
+flask==3.1.0
+flask-cors==5.0.0
+
+# --- Utilidades generales ---
+tqdm==4.67.1            # Barras de progreso en la terminal
+
+# ============================================================
+# NOTA: No se instala scikit-learn, TensorFlow, Keras,
+#       PyTorch ni ninguna librería de clasificación automática.
+#       Todo el algoritmo Naïve Bayes está implementado desde cero.
+# ============================================================
