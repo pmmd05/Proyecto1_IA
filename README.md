@@ -81,7 +81,6 @@ El script:
 
 ### Ejecutar la interfaz web
 ```bash
-# (Disponible en la Fase 2 — Frontend)
 python app.py
 ```
 
@@ -113,7 +112,6 @@ python app.py
 ## Dependencias Principales
 
 - **nltk** — Tokenización y stopwords (solo preprocesamiento)
-- **datasets** — Descarga del dataset desde HuggingFace (solo carga de datos)
 - **flask** — Servidor web para la interfaz
 - **flask-cors** — CORS para comunicación frontend-backend
 

@@ -11,7 +11,7 @@ Columnas relevantes:
   - category    : categoría de soporte asignada (label del modelo).
 
 El módulo ofrece dos métodos de carga:
-  1. Desde HuggingFace Hub (requiere `datasets` instalado).
+    1. Descarga directa del CSV publicado en Hugging Face (urllib estándar).
   2. Desde un archivo CSV local (si el dataset fue descargado manualmente).
 """
 
@@ -19,6 +19,8 @@ import csv
 import random
 from collections import Counter
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlopen
 
 
 # Ruta por defecto para datos locales
@@ -29,6 +31,11 @@ LOCAL_CSV_FILENAME = "bitext_customer_support.csv"
 
 # Nombre real del archivo CSV en el repositorio de Hugging Face
 REMOTE_CSV_FILENAME = "Bitext_Sample_Customer_Support_Training_Dataset_27K_responses-v11.csv"
+
+# URL pública de descarga directa del CSV (sin librerías externas)
+REMOTE_CSV_URL_TEMPLATE = (
+    "https://huggingface.co/datasets/{dataset_name}/resolve/main/{filename}?download=true"
+)
 
 
 class DataLoader:
@@ -56,11 +63,7 @@ class DataLoader:
         save_local: bool = True,
     ) -> tuple[list[str], list[str]]:
         """
-        Descarga el dataset desde HuggingFace Hub.
-
-        Descarga el CSV directamente desde el repositorio de Hugging Face
-        usando `huggingface_hub` para evitar dependencias incompatibles con
-        el entorno de ejecución.
+        Descarga el CSV directamente desde Hugging Face usando urllib.
 
         Parámetros
         ----------
@@ -73,33 +76,35 @@ class DataLoader:
         tuple[list[str], list[str]]
             (textos, etiquetas)
         """
+        if split != "train":
+            print(f"[DataLoader] Aviso: split='{split}' no aplica para el CSV publicado; se usará train.")
+
         print(f"[DataLoader] Descargando dataset desde HuggingFace: {dataset_name}...")
-        try:
-            from huggingface_hub import hf_hub_download
-        except ImportError as exc:
-            raise ImportError(
-                "La biblioteca 'huggingface-hub' no está instalada.\n"
-                "Instálala con: pip install huggingface-hub"
-            ) from exc
+        download_url = REMOTE_CSV_URL_TEMPLATE.format(
+            dataset_name=dataset_name,
+            filename=REMOTE_CSV_FILENAME,
+        )
+        temp_csv_path = self.data_dir / f"_tmp_{REMOTE_CSV_FILENAME}"
 
         try:
-            csv_source_path = hf_hub_download(
-                repo_id=dataset_name,
-                repo_type="dataset",
-                filename=REMOTE_CSV_FILENAME,
-            )
-        except Exception as exc:
+            with urlopen(download_url, timeout=120) as response:
+                temp_csv_path.write_bytes(response.read())
+        except (URLError, TimeoutError) as exc:
             raise RuntimeError(
                 f"No fue posible descargar el dataset desde HuggingFace: {dataset_name}\n"
                 f"Verifica la conexión a internet o descarga manualmente el archivo CSV."
             ) from exc
 
-        texts, labels = self._load_csv_file(
-            Path(csv_source_path),
-            text_col="instruction",
-            label_col="category",
-            encoding="utf-8",
-        )
+        try:
+            texts, labels = self._load_csv_file(
+                temp_csv_path,
+                text_col="instruction",
+                label_col="category",
+                encoding="utf-8",
+            )
+        finally:
+            if temp_csv_path.exists():
+                temp_csv_path.unlink()
 
         print(f"[DataLoader] Dataset cargado: {len(texts)} instancias.")
         self._print_class_distribution(labels)

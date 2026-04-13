@@ -84,6 +84,7 @@ CATEGORY_META = {
     "SHIPPING":    {"icon": "🚚", "color": "#10b981", "label": "Envíos"},
     "REFUND":      {"icon": "↩️",  "color": "#ef4444", "label": "Reembolsos"},
     "ACCOUNT":     {"icon": "👤", "color": "#8b5cf6", "label": "Cuenta"},
+    "CANCEL":      {"icon": "❌", "color": "#f97316", "label": "Cancelaciones"},
     "CANCELLATION":{"icon": "❌", "color": "#f97316", "label": "Cancelaciones"},
     "CONTACT":     {"icon": "📞", "color": "#06b6d4", "label": "Contacto"},
     "DELIVERY":    {"icon": "📬", "color": "#84cc16", "label": "Entrega"},

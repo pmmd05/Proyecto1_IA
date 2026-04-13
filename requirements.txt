@@ -6,9 +6,7 @@
 # --- Procesamiento de texto (NLTK: solo tokenización y stopwords) ---
 nltk==3.9.1
 
-# --- Carga del dataset desde HuggingFace (solo para descarga de datos) ---
-datasets==3.5.0
-huggingface-hub==0.29.0
+# --- Descarga del dataset (se usa urllib de la librería estándar) ---
 
 # --- Servidor web (Flask para el backend de la interfaz web) ---
 flask==3.1.0
