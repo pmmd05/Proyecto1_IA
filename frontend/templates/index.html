@@ -21,10 +21,6 @@
           <span class="logo-sub">Motor de Clasificación · Naïve Bayes</span>
         </div>
       </div>
-      <div class="header-status">
-        <span class="status-dot" id="statusDot"></span>
-        <span class="status-label" id="statusLabel">Conectando...</span>
-      </div>
     </div>
   </header>
 
@@ -33,7 +29,12 @@
     <div class="hero-grid-bg"></div>
     <div class="hero-content">
       <p class="hero-eyebrow">Sistema de Enrutamiento Inteligente</p>
-      <h1 class="hero-title">Clasifica tu solicitud<br/><em>al instante</em></h1>
+      <div style="position: relative; display: inline-block;">
+        <h1 class="hero-title">Clasifica tu solicitud<br/><em>al instante</em></h1>
+        <img src="{{ url_for('static', filename='img/Escudo.png') }}" 
+             alt="Escudo" 
+             class="hero-logo" />
+      </div>
       <p class="hero-desc">
         Ingresa tu consulta y nuestro motor de IA detectará automáticamente la categoría
         correcta para redirigirla al equipo adecuado.
