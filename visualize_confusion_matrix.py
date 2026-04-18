@@ -16,6 +16,12 @@ from backend.preprocessor import TextPreprocessor
 from backend.evaluator import MetricsCalculator
 
 
+# Configuración alineada con train.py para reproducir métricas de test
+TEST_SIZE = 0.2
+RANDOM_SEED = 42
+STRATIFY_SPLIT = True
+
+
 def print_confusion_matrix_table(matrix: list[list[int]], classes: list[str]):
     """Imprime la matriz de confusión en formato tabla ASCII."""
     print("\n" + "=" * 100)
@@ -166,22 +172,36 @@ def main():
     except Exception as e:
         print(f"✗ Error al cargar dataset: {e}")
         return
+
+    # Reproducir el mismo split hold-out usado en train.py
+    _, X_test_raw, _, y_test = loader.train_test_split(
+        X_texts,
+        y,
+        test_size=TEST_SIZE,
+        random_seed=RANDOM_SEED,
+        stratify=STRATIFY_SPLIT,
+    )
+    print(
+        f"✓ Evaluando sobre HOLD-OUT de test: {len(X_test_raw)} instancias "
+        f"(test_size={TEST_SIZE}, seed={RANDOM_SEED}, stratify={STRATIFY_SPLIT})"
+    )
     
-    # Preprocesar
-    preprocessor = TextPreprocessor(use_lemmatization=True, min_token_length=2)
+    # Preprocesar (prioriza configuración guardada durante entrenamiento)
+    use_lemmatization = bool(metadata.get("lemmatization", True))
+    preprocessor = TextPreprocessor(use_lemmatization=use_lemmatization, min_token_length=2)
     print("  Preprocesando...")
-    X_tokens = preprocessor.preprocess_batch(X_texts)
+    X_tokens = preprocessor.preprocess_batch(X_test_raw)
     
     # Predecir
     print("  Prediciendo...")
     y_pred = model.predict_batch(X_tokens)
     
     # Calcular matriz
-    matrix = MetricsCalculator.confusion_matrix(y, y_pred, model.classes_)
+    matrix = MetricsCalculator.confusion_matrix(y_test, y_pred, model.classes_)
     
     # Mostrar resultados
     print_confusion_matrix_table(matrix, model.classes_)
-    print_per_class_metrics(y, y_pred, model.classes_)
+    print_per_class_metrics(y_test, y_pred, model.classes_)
     
     # Generar gráfico
     try:
@@ -190,7 +210,7 @@ def main():
         print(f"⚠️  No se pudo generar gráfico: {e}")
     
     # Accuracy global
-    accuracy = MetricsCalculator.accuracy(y, y_pred)
+    accuracy = MetricsCalculator.accuracy(y_test, y_pred)
     print(f"\nAccuracy Global: {accuracy:.4f} ({accuracy*100:.2f}%)\n")
 
 
